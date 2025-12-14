@@ -1,5 +1,3 @@
-// 2025.10.07 업데이트
-
 using UnityEngine;
 using System.Collections;
 
@@ -17,9 +15,9 @@ public class Footstep : MonoBehaviour
     public AudioClip narrationClip;
     public float narrationPlayTime = 3.0f;
 
-    [Header("그룹의 마지막 스텝 설정")]
+    [Header("그룹/최종 이벤트 트리거")]
     public bool isFinalStepInGroup;
-    public bool isFinalEventTrigger; // isFinalStepInGroup이 true일 때만 의미 있음
+    public bool isFinalEventTrigger;
 
     private FootstepManager manager;
     private AudioSource audioSource;
@@ -29,33 +27,24 @@ public class Footstep : MonoBehaviour
     private ParticleSystem[] childParticles;
     private GameObject parentGroup;
 
-
     void Awake()
     {
         manager = FindObjectOfType<FootstepManager>();
-        if (manager == null) Debug.LogError("FootstepManager를 씬에서 찾을 수 없습니다!");
+        if (manager == null) Debug.LogError("FootstepManager missing");
 
         audioSource = GetComponent<AudioSource>();
         childRenderers = GetComponentsInChildren<Renderer>(true);
         childParticles = GetComponentsInChildren<ParticleSystem>(true);
 
-        // 나의 바로 위 부모를 그룹으로 인식하도록 수정
-        
-        if (transform.parent != null)
-        {
-            parentGroup = transform.parent.gameObject;
-        }
-        else
-        {
-            Debug.LogError("Footstep 오브젝트는 반드시 그룹 안에 있어야 함", gameObject);
-        }
-
+        if (transform.parent != null) parentGroup = transform.parent.gameObject;
+        else Debug.LogError("Footstep 오브젝트는 반드시 그룹 아래에 있어야 함", gameObject);
     }
 
     void OnEnable()
     {
         isTriggered = false;
-        if (GetComponent<Collider>() != null) GetComponent<Collider>().enabled = true;
+        var col = GetComponent<Collider>();
+        if (col != null) col.enabled = true;
         StartCoroutine(FadeIn());
     }
 
@@ -64,16 +53,13 @@ public class Footstep : MonoBehaviour
         if (other.CompareTag("MainCamera") && !isTriggered)
         {
             isTriggered = true;
-            if (GetComponent<Collider>() != null) GetComponent<Collider>().enabled = false;
+            var col = GetComponent<Collider>();
+            if (col != null) col.enabled = false;
 
             if (type == FootstepType.Guiding)
-            {
                 StartCoroutine(FadeOut(gameObject, false));
-            }
             else if (type == FootstepType.Narration)
-            {
                 StartCoroutine(HandleNarration());
-            }
         }
     }
 
@@ -89,20 +75,18 @@ public class Footstep : MonoBehaviour
         {
             if (isFinalEventTrigger)
             {
-                manager.StartFinalEvent();
+                // foot3 도달 --> 3초 대기 후 최종 이벤트 시작
+                manager.StartFinalEvent(3.0f);
             }
             else
             {
                 manager.ShowNextFootstepGroup();
             }
-
-            // 그룹 전체를 비활성화 (Destroy가 아닌 안전한 방식)
-            StartCoroutine(FadeOut(parentGroup, false));
+            StartCoroutine(FadeOut(parentGroup, false)); // 그룹 전체 비활성
         }
         else
         {
-            // 그룹의 마지막이 아닌 나레이션 스텝은 자기 자신만 비활성화
-            StartCoroutine(FadeOut(gameObject, false));
+            StartCoroutine(FadeOut(gameObject, false));  // 현재 발자국만 비활성
         }
     }
 
@@ -110,12 +94,11 @@ public class Footstep : MonoBehaviour
     private IEnumerator FadeIn()
     {
         SetAlpha(0f);
-        float elapsedTime = 0f;
-        while (elapsedTime < effectDuration)
+        float t = 0f;
+        while (t < effectDuration)
         {
-            float alpha = Mathf.Lerp(0f, 1f, elapsedTime / effectDuration);
-            SetAlpha(alpha);
-            elapsedTime += Time.deltaTime;
+            SetAlpha(Mathf.Lerp(0f, 1f, t / effectDuration));
+            t += Time.deltaTime;
             yield return null;
         }
         SetAlpha(1f);
@@ -123,24 +106,17 @@ public class Footstep : MonoBehaviour
 
     private IEnumerator FadeOut(GameObject objectToProcess, bool destroy)
     {
-        float elapsedTime = 0f;
-        while (elapsedTime < effectDuration)
+        float t = 0f;
+        while (t < effectDuration)
         {
-            float alpha = Mathf.Lerp(1f, 0f, elapsedTime / effectDuration);
-            SetAlpha(alpha);
-            elapsedTime += Time.deltaTime;
+            SetAlpha(Mathf.Lerp(1f, 0f, t / effectDuration));
+            t += Time.deltaTime;
             yield return null;
         }
         SetAlpha(0f);
 
-        if (destroy)
-        {
-            Destroy(objectToProcess);
-        }
-        else
-        {
-            objectToProcess.SetActive(false);
-        }
+        if (destroy) Destroy(objectToProcess);
+        else objectToProcess.SetActive(false);
     }
 
     private void SetAlpha(float alpha)
@@ -149,9 +125,7 @@ public class Footstep : MonoBehaviour
         {
             if (rend != null && rend.material.HasProperty("_Color"))
             {
-                Color newColor = rend.material.color;
-                newColor.a = alpha;
-                rend.material.color = newColor;
+                Color c = rend.material.color; c.a = alpha; rend.material.color = c;
             }
         }
         foreach (var ps in childParticles)
@@ -159,11 +133,8 @@ public class Footstep : MonoBehaviour
             if (ps != null)
             {
                 var main = ps.main;
-                var startColor = main.startColor;
-                Color newColor = startColor.color;
-                newColor.a = alpha;
-                startColor.color = newColor;
-                main.startColor = startColor;
+                var sc = main.startColor;
+                Color c = sc.color; c.a = alpha; sc.color = c; main.startColor = sc;
             }
         }
     }
