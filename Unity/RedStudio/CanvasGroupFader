@@ -1,0 +1,88 @@
+
+using System.Collections;
+using UnityEngine;
+
+[RequireComponent(typeof(CanvasGroup))]
+public class CanvasGroupFader : MonoBehaviour
+{
+    [Header("   ̵   ð      ")]
+    public float fadeInDuration = 0.4f;
+    public float fadeOutDuration = 0.3f;
+
+    [Header("     0            Ʈ   Ȱ  ȭ")]
+    public bool deactivateOnFadeOut = true;
+
+    private CanvasGroup _cg;
+    private Coroutine _currentRoutine;
+
+    void Awake()
+    {
+        _cg = GetComponent<CanvasGroup>();
+        if (_cg == null)
+            _cg = gameObject.AddComponent<
+
+    public void ShowInstant()
+    {
+        if (_currentRoutine != null) StopCoroutine(_currentRoutine);
+        gameObject.SetActive(true);
+        _cg.alpha = 1f;
+        _cg.interactable = true;
+        _cg.blocksRaycasts = true;
+    }
+    
+    public void HideInstant()
+    {
+        if (_currentRoutine != null) StopCoroutine(_currentRoutine);
+        _cg.alpha = 0f;
+        _cg.interactable = false;
+        _cg.blocksRaycasts = false;
+        if (deactivateOnFadeOut)
+            gameObject.SetActive(false);
+    }
+
+
+    public void FadeIn()
+    {
+        if (_currentRoutine != null) StopCoroutine(_currentRoutine);
+        gameObject.SetActive(true);
+        _currentRoutine = StartCoroutine(FadeRoutine(1f, fadeInDuration));
+    }
+
+
+    public void FadeOut()
+    {
+        if (_currentRoutine != null) StopCoroutine(_currentRoutine);
+        _currentRoutine = StartCoroutine(FadeRoutine(0f, fadeOutDuration));
+    }
+
+
+    IEnumerator FadeRoutine(float targetAlpha, float duration)
+    {
+        if (duration <= 0f)
+        {
+            _cg.alpha = targetAlpha;
+        }
+        else
+        {
+            float start = _cg.alpha;
+            float t = 0f;
+            while (t < duration)
+            {
+                t += Time.deltaTime;
+                float lerp = Mathf.Clamp01(t / duration);
+                _cg.alpha = Mathf.Lerp(start, targetAlpha, lerp);
+                yield return null;
+            }
+        }
+
+        bool visible = targetAlpha > 0.99f;
+
+        _cg.interactable = visible;
+        _cg.blocksRaycasts = visible;
+
+        if (!visible && deactivateOnFadeOut)
+            gameObject.SetActive(false);
+
+        _currentRoutine = null;
+    }
+}
