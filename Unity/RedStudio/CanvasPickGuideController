@@ -1,0 +1,127 @@
+using UnityEngine;
+using ColorPicker;      
+
+public class CanvasPickGuideController : MonoBehaviour
+{
+    [Header("색 정보를 가져올 PickerPipeline")]
+    public PickerPipeline pipeline;       
+
+    [Header("캔버스 안내 UI들")]
+    [Tooltip("캔버스 관련 안내 UI들 전부")]
+    public GameObject[] guideUIs;         
+
+    [Header("한 번만 켤지 여부")]
+    public bool showOnlyOnce = true;
+
+    private bool _hasShown = false;
+
+    void Awake()
+    {
+        if (pipeline != null)
+        {
+            pipeline.OnColorChanged.AddListener(OnColorPicked);
+        }
+
+       
+        if (guideUIs != null)
+        {
+            foreach (var go in guideUIs)
+            {
+                if (!go) continue;
+
+              
+                var fader = go.GetComponent<CanvasGroupFader>();
+                if (fader != null)
+                {
+                    fader.HideInstant();
+                }
+                else
+                {
+                    go.SetActive(false);
+                }
+            }
+        }
+    }
+
+    void OnDestroy()
+    {
+        if (pipeline != null)
+        {
+            pipeline.OnColorChanged.RemoveListener(OnColorPicked);
+        }
+    }
+    private void OnColorPicked(Color c)
+    {
+        if (showOnlyOnce && _hasShown) return;
+        _hasShown = true;
+
+        if (guideUIs == null) return;
+
+        foreach (var go in guideUIs)
+        {
+            if (!go) continue;
+
+            var fader = go.GetComponent<CanvasGroupFader>();
+
+            if (fader != null)
+            {
+                fader.FadeIn();        
+            }
+            else
+            {
+                go.SetActive(true);   
+            }
+        }
+
+        Debug.Log("[CanvasPickGuideController] 색 선택 → 캔버스 안내 UI ON");
+    }
+    
+    public void OnConfirmDecision()
+    {
+        if (guideUIs == null) return;
+
+        foreach (var go in guideUIs)
+        {
+            if (!go) continue;
+
+            var fader = go.GetComponent<CanvasGroupFader>();
+
+            if (fader != null)
+            {
+                fader.FadeOut();    
+            }
+            else
+            {
+                go.SetActive(false); 
+            }
+        }
+
+        Debug.Log("[CanvasPickGuideController] 색상결정하기 → 캔버스 안내 UI OFF");
+    }
+
+   
+    public void ResetGuide()
+    {
+        _hasShown = false;
+
+        if (guideUIs == null) return;
+
+        foreach (var go in guideUIs)
+        {
+            if (!go) continue;
+
+            var fader = go.GetComponent<CanvasGroupFader>();
+
+            if (fader != null)
+            {
+                fader.HideInstant();
+            }
+            else
+            {
+                go.SetActive(false);
+            }
+        }
+
+        Debug.Log("[CanvasPickGuideController] ResetGuide()");
+    }
+}
