@@ -1,0 +1,231 @@
+using System.Collections;
+using UnityEngine;
+using UnityEngine.InputSystem;          
+using UnityEngine.XR.Interaction.Toolkit;
+using UnityEngine.SceneManagement;      
+
+public class DevJumpToGaze : MonoBehaviour
+{
+    [Header("락 포인트")]
+    public ViewSpotLock startLock;   
+    public ViewSpotLock gazeLock;    
+
+    [Header("응시 측정")]
+    public GazeWallManager gazeManager;
+
+    [Header("UI Ray (응시존에서만 ON)")]
+    public XRRayInteractor leftRay;
+    public XRRayInteractor rightRay;
+    public XRInteractorLineVisual leftLine;
+    public XRInteractorLineVisual rightLine;
+
+    
+    [Header("나레이션 1 (시작존에서)")]
+    public AudioSource narrationSource;
+    public float narrationStartDelay = 2f;
+    public bool autoJumpAfterNarration = true;
+    public float narrationDurationOverride = 0f;
+
+   
+    [Header("나레이션 2 (응시존에서)")]
+    public AudioSource secondNarrationSource;
+    public float secondNarrationDelay = 2f;
+
+   
+    [Header("나레이션 3 (관람 마치기 후, 다시 시작존에서)")]
+    public AudioSource thirdNarrationSource;
+    public float thirdNarrationDelay = 2f;
+
+   
+    [Header("나레이션 4 (색상 결정 버튼 클릭 시)")]
+    [Tooltip("색상결정하기 버튼을 눌렀을 때 재생할 나레이션")]
+    public AudioSource fourthNarrationSource;
+
+    [Tooltip("필요하면 약간의 딜레이(초). 0이면 버튼 누르자마자 재생")]
+    public float fourthNarrationDelay = 0f;
+    
+    [Header("컷아웃 씬 전환 설정")]
+    [Tooltip("나레이션 4가 끝난 뒤 컷아웃 씬으로 전환할지 여부")]
+    public bool enableCutoutSceneAfterFourth = true;
+
+    [Tooltip("로드할 컷아웃 씬 이름 (Build Settings에 등록되어 있어야 함)")]
+    public string cutoutSceneName = "CutoutScene";
+
+    [Tooltip("나레이션 4가 끝난 뒤 추가로 기다릴 시간(초)")]
+    public float cutoutDelayAfterFourth = 2f;
+
+    private bool cutoutSceneQueued = false;
+
+   
+    [Header("개발용 키보드 제어(선택)")]
+    public bool enableDevKeys = true;
+    
+    [Header("씬 전환 페이드용 Quad (FadeQuadController)")]
+    public FadeQuadController fadeQuad;
+
+   
+    void Start()
+    {
+        
+        if (startLock) startLock.Lock();
+        ToggleRays(false);
+
+        
+        if (autoJumpAfterNarration && narrationSource != null)
+        {
+            StartCoroutine(AutoFlow());
+        }
+    }
+
+    void Update()
+    {
+        if (!enableDevKeys || Keyboard.current == null) return;
+
+        if (Keyboard.current.gKey.wasPressedThisFrame)
+            GoToGazeZone();
+
+        if (Keyboard.current.sKey.wasPressedThisFrame)
+            BackToStart();
+    }
+
+    
+    IEnumerator AutoFlow()
+    {
+        if (narrationStartDelay > 0f)
+            yield return new WaitForSeconds(narrationStartDelay);
+
+        if (narrationSource != null)
+        {
+            if (!narrationSource.isPlaying)
+                narrationSource.Play();
+
+            float wait =
+                (narrationDurationOverride > 0f) ? narrationDurationOverride :
+                (narrationSource.clip != null ? narrationSource.clip.length : 29f);
+
+            yield return new WaitForSeconds(wait);
+        }
+
+        GoToGazeZone();
+    }
+
+   
+    public void GoToGazeZone()
+    {
+        if (startLock) startLock.Unlock();
+        if (gazeLock) gazeLock.Lock();
+
+        StartCoroutine(StartGazeNextFrame());
+
+        if (secondNarrationSource != null && secondNarrationDelay >= 0f)
+            StartCoroutine(PlaySecondNarrationAfterDelay());
+    }
+
+    IEnumerator StartGazeNextFrame()
+    {
+        yield return null;
+
+        if (gazeManager != null)
+            gazeManager.StartGazeMode();
+
+        ToggleRays(true);
+        Debug.Log("[DevJumpToGaze] 응시존 진입 + 응시 시작");
+    }
+
+    IEnumerator PlaySecondNarrationAfterDelay()
+    {
+        if (secondNarrationDelay > 0f)
+            yield return new WaitForSeconds(secondNarrationDelay);
+
+        if (secondNarrationSource != null && !secondNarrationSource.isPlaying)
+        {
+            secondNarrationSource.Play();
+            Debug.Log("[DevJumpToGaze] 나레이션 2 재생 시작");
+        }
+    }
+    
+    public void BackToStart()
+    {
+        if (gazeManager != null)
+            gazeManager.StopAndDecide();
+
+        if (gazeLock) gazeLock.Unlock();
+        if (startLock) startLock.Lock();
+
+        ToggleRays(false);
+        Debug.Log("[DevJumpToGaze] 시작 지점으로 복귀");
+
+        if (thirdNarrationSource != null && thirdNarrationDelay >= 0f)
+            StartCoroutine(PlayThirdNarrationAfterDelay());
+    }
+
+    IEnumerator PlayThirdNarrationAfterDelay()
+    {
+        if (thirdNarrationDelay > 0f)
+            yield return new WaitForSeconds(thirdNarrationDelay);
+
+        if (thirdNarrationSource != null && !thirdNarrationSource.isPlaying)
+        {
+            thirdNarrationSource.Play();
+            Debug.Log("[DevJumpToGaze] 나레이션 3 재생 시작");
+        }
+    }
+    
+    public void PlayFourthNarration()
+    {
+        if (fourthNarrationSource == null) return;
+
+        if (fourthNarrationDelay > 0f)
+        {
+            StartCoroutine(PlayFourthNarrationDelayed());
+        }
+        else
+        {
+            if (!fourthNarrationSource.isPlaying)
+                fourthNarrationSource.Play();
+
+            Debug.Log("[DevJumpToGaze] 나레이션 4 재생 시작 (즉시)");
+            TryQueueCutoutScene();
+        }
+    }
+
+    IEnumerator PlayFourthNarrationDelayed()
+    {
+        yield return new WaitForSeconds(fourthNarrationDelay);
+
+        if (fourthNarrationSource != null && !fourthNarrationSource.isPlaying)
+        {
+            fourthNarrationSource.Play();
+            Debug.Log("[DevJumpToGaze] 나레이션 4 재생 시작 (딜레이 후)");
+            TryQueueCutoutScene();
+        }
+    }
+    
+    void TryQueueCutoutScene()
+    {
+        if (!enableCutoutSceneAfterFourth) return;
+        if (cutoutSceneQueued) return;
+        if (string.IsNullOrEmpty(cutoutSceneName)) return;
+
+        cutoutSceneQueued = true;
+        StartCoroutine(WaitAndLoadCutoutScene());
+    }
+
+    IEnumerator WaitAndLoadCutoutScene()
+    {
+       
+        float wait = 0f;
+
+        if (fourthNarrationSource != null && fourthNarrationSource.clip != null)
+        {
+            wait = fourthNarrationSource.clip.length;
+        }
+        else
+        {
+           
+            wait = 3f;
+        }
+
+        yield ret...
+
+<...etc...>
