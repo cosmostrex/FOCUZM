@@ -19,7 +19,7 @@ public class RosaireMaster : MonoBehaviour
 
     void Start()
     {
-        // 0) 컷아웃 선택 가져오기
+
         selectedFrameName = SceneData.Instance?.selectedShapeName;
 
         HideAllFrames();
