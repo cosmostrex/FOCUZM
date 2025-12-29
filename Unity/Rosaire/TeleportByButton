@@ -7,8 +7,8 @@ public class TeleportByButton : MonoBehaviour
     public XROrigin xrOrigin;
 
     public GameObject uiToHideAfterTeleport;
-    public GameObject hotspotB;       
-    public GameObject portalB;        
+    public GameObject hotspotB;   
+    public GameObject portalB;    
 
     public void TeleportNow()
     {
