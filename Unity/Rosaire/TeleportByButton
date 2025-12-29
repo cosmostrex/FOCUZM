@@ -1,0 +1,27 @@
+using UnityEngine;
+using Unity.XR.CoreUtils;
+
+public class TeleportByButton : MonoBehaviour
+{
+    public Transform teleportPoint;   // C 지점
+    public XROrigin xrOrigin;
+
+    public GameObject uiToHideAfterTeleport; // 이동 후 UI 끄기
+
+    public void TeleportNow()
+    {
+        if (teleportPoint == null || xrOrigin == null)
+        {
+            Debug.LogWarning("TeleportByButton: 설정이 비어있음");
+            return;
+        }
+
+        Vector3 offset = xrOrigin.CameraInOriginSpacePos;
+        Vector3 dest = teleportPoint.position - offset;
+
+        xrOrigin.transform.position = dest;
+
+        if (uiToHideAfterTeleport != null)
+            uiToHideAfterTeleport.SetActive(false);
+    }
+}
