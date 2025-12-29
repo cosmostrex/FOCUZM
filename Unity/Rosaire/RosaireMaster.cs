@@ -1,53 +1,74 @@
 using UnityEngine;
+using Unity.XR.CoreUtils;
 
 public class RosaireMaster : MonoBehaviour
 {
-    [Header("씬 시작 시 숨겨둘 것들")]
-    public GameObject loraPlane;
-    public GameObject cutoutFrameParent;
+    [Header("씬 시작 위치(텔레포트 A)")]
+    public Transform teleportPointA;
+    public XROrigin xrOrigin;
 
-    [Header("나중에 활성화할 버튼")]
-    public GameObject activateButton;
+    [Header("초기 숨길 오브젝트들")]
+    public GameObject LoraPlane;
+    public Transform CutoutFrameParent;
+
+    [Header("이동/회전 비활성화 루트")]
+    public GameObject locomotionRoot;
+
+    [Header("컷아웃에서 선택된 프레임 이름")]
+    public string selectedFrameName;
 
     void Start()
     {
-        // 1) 기본 비활성화
-        if (loraPlane) loraPlane.SetActive(false);
-        if (cutoutFrameParent) cutoutFrameParent.SetActive(false);
+        // 0) 컷아웃 선택 가져오기
+        selectedFrameName = SceneData.Instance?.selectedShapeName;
 
-        // 2) 컷아웃 프레임 형태 적용
+        HideAllFrames();
         ShowSelectedFrame();
+        TeleportToStartPoint();
 
-        // 3) 버튼 처음엔 숨김
-        if (activateButton) activateButton.SetActive(false);
-
-        // 4) 나중에 버튼 나타나게 (나레이션 끝 시점 맞추면 됨!)
-        Invoke(nameof(ShowActivateButton), 7f);
+        if (locomotionRoot != null)
+            locomotionRoot.SetActive(false);
     }
 
-    void ShowActivateButton()
+    void HideAllFrames()
     {
-        if (activateButton) activateButton.SetActive(true);
-    }
+        if (CutoutFrameParent == null) return;
 
-    public void OnActivateButtonPressed()
-    {
-        if (loraPlane) loraPlane.SetActive(true);
-        if (cutoutFrameParent) cutoutFrameParent.SetActive(true);
-
-        Debug.Log("[RosaireMaster] 최종 이미지 + 프레임 활성화됨!");
+        foreach (Transform child in CutoutFrameParent)
+            child.gameObject.SetActive(false);
     }
 
     void ShowSelectedFrame()
     {
-        string keyword = SceneData.Instance.selectedShapeName
-            .Replace("henri", "")
-            .ToLower();
+        if (CutoutFrameParent == null) return;
+        if (string.IsNullOrEmpty(selectedFrameName)) return;
 
-        foreach (Transform frame in cutoutFrameParent.transform)
+        // 컷아웃 이름 = henricoral
+        // 프레임 이름 = coral_frame, 컷아웃에 저장된 도형 이름 기반
+        string keyword = selectedFrameName.Replace("henri", "");
+        string targetName = keyword + "_frame";   // 최종적으로 찾을 이름
+
+        Debug.Log($"[RosaireMaster] 프레임 찾기: {targetName}");
+
+        Transform t = CutoutFrameParent.Find(targetName);
+
+        if (t != null)
         {
-            bool show = frame.name.ToLower().Contains(keyword);
-            frame.gameObject.SetActive(show);
+            t.gameObject.SetActive(true);
+            Debug.Log("활성화된 프레임: " + t.name);
         }
+        else
+        {
+            Debug.LogWarning("해당 프레임 없음: " + targetName);
+        }
+    }
+
+    void TeleportToStartPoint()
+    {
+        if (teleportPointA == null || xrOrigin == null) return;
+
+        Vector3 offset = xrOrigin.CameraInOriginSpacePos;
+        Vector3 dest = teleportPointA.position - offset;
+        xrOrigin.transform.position = dest;
     }
 }
