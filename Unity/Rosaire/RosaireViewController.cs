@@ -4,55 +4,51 @@ using Unity.XR.CoreUtils;
 public class RosaireViewController : MonoBehaviour
 {
     [Header("텔레포트 관련")]
-    public Transform teleportPointC;
+    public Transform TeleportPointC;
     public XROrigin xrOrigin;
 
     [Header("숨길 오브젝트들 (제단 관련)")]
-    public GameObject altarWindow;   // 제단 창
-    public GameObject altarGlass;    // 제단 납창
+    public GameObject AltarWindow;
+    public GameObject AltarGlass;
 
     [Header("보여줄 오브젝트들")]
-    public GameObject loraPlane;
-    public GameObject cutoutFrameParent;
+    public GameObject LoraPlane;
+    public Transform CutoutFrameParent;
 
-    [Header("버튼 UI (감상 버튼)")]
-    public GameObject teleportUI;
+    [Header("포털/핫스팟 오브젝트들")]
+    public GameObject PortalB;      // 포탈B에 드래그
+    public GameObject HotspotB;     // 핫스팟 B
+
+    [Header("버튼 UI")]
+    public GameObject TeleportUI;   // 버튼 UI (나중에 숨김)
+
+    // 사용자가 UI 버튼을 눌렀을 때 실행되는 함수
 
     public void OnViewButtonPressed()
     {
-        // 1. 텔레포트 UI 숨기기
-        if (teleportUI != null)
-            teleportUI.SetActive(false);
+        Debug.Log("-> OnViewButtonPressed() 실행됨!");
 
-        // 2. 제단 관련 오브젝트 숨기기
-        if (altarWindow != null)
-            altarWindow.SetActive(false);
+        // 제단 오브젝트 숨기기
+        if (AltarWindow != null) AltarWindow.SetActive(false);
+        if (AltarGlass != null) AltarGlass.SetActive(false);
 
-        if (altarGlass != null)
-            altarGlass.SetActive(false);
+        // LoRA 이미지 표시
+        if (LoraPlane != null) LoraPlane.SetActive(true);
 
-        // 3. LoRA plane & 컷아웃 프레임 활성화
-        if (loraPlane != null)
-            loraPlane.SetActive(true);
-
-        if (cutoutFrameParent != null)
-            cutoutFrameParent.SetActive(true);
-
-        // 4. 감상 위치로 텔레포트
-        TeleportToViewPoint();
-    }
-
-    private void TeleportToViewPoint()
-    {
-        if (teleportPointC == null || xrOrigin == null)
+        // 컷아웃 프레임 표시
+        if (CutoutFrameParent != null)
         {
-            Debug.LogWarning("텔레포트 설정이 비어 있음");
-            return;
+            foreach (Transform f in CutoutFrameParent)
+                f.gameObject.SetActive(true);
         }
 
-        Vector3 offset = xrOrigin.CameraInOriginSpacePos;
-        Vector3 dest = teleportPointC.position - offset;
+        // 포털 B, 핫스팟 B 비활성화
+        if (PortalB != null) PortalB.SetActive(false);
+        if (HotspotB != null) HotspotB.SetActive(false);
 
-        xrOrigin.transform.position = dest;
+        // 버튼 UI 숨김
+        if (TeleportUI != null) TeleportUI.SetActive(false);
+
+        Debug.Log("포털B, 핫스팟B 비활성화");
     }
 }
