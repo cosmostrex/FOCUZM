@@ -5,11 +5,11 @@ using UnityEngine;
 [RequireComponent(typeof(CanvasGroup))]
 public class CanvasGroupFader : MonoBehaviour
 {
-    [Header("   ̵   ð      ")]
+    [Header("페이드 시간 설정")]
     public float fadeInDuration = 0.4f;
     public float fadeOutDuration = 0.3f;
 
-    [Header("     0            Ʈ   Ȱ  ȭ")]
+    [Header("페이드 아웃 시 오브젝트 비활성화 여부")]
     public bool deactivateOnFadeOut = true;
 
     private CanvasGroup _cg;
