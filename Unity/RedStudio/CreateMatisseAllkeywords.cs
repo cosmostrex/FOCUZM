@@ -119,4 +119,20 @@ public static class CreateMatisseAllKeywords
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
-        EditorUtility.DisplayDialog("
+        EditorUtility.DisplayDialog("Keywords", "Matisse 키워드 세트(정물/풍경/인물) 9개 생성 완료!", "OK");
+    }
+
+    private static void CreateSO(string id, string name,
+                                 string portrait, string stillLife, string landscape, string path)
+    {
+        var so = ScriptableObject.CreateInstance<ArtworkKeywords>();
+        so.artworkId = id;
+        so.displayName = name;
+        
+        so.portraitPrompt = portrait;
+        so.stillLifePrompt = stillLife;
+        so.landscapePrompt = landscape;
+        AssetDatabase.CreateAsset(so, path);
+    }
+}
+#endif
